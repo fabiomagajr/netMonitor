@@ -2,10 +2,11 @@ import requests
 import socket
 import time
 import os
+import getpass as gt
 from datetime import datetime
 
 API_IP = "seu_server"
-API_URL = f"http://{API_IP}:8000/update_status/"  # Substitua pelo endereço real da API
+API_URL = "http://seu_server:8000/update_status/"  # Substitua pelo endereço real da API
 ERROR_LOG_DIR = "ErrorLogs"
 CHECK_INTERVAL = 5  # Tempo entre cada envio de status
 
@@ -33,7 +34,8 @@ def get_ip():
 def send_status():
     hostname = socket.gethostname()
     ip = get_ip()
-    data = {"hostname": hostname, "ip": ip, "ConnectionOK": True}
+    user=gt.getuser()
+    data = {"hostname": hostname, "user":user, "ip": ip, "ConnectionOK": True}
     
     try:
         response = requests.post(API_URL, json=data, timeout=5)
