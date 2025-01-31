@@ -3,7 +3,6 @@ from pydantic import BaseModel
 import json
 import time
 import threading
-import uvicorn
 from fastapi.responses import HTMLResponse
 
 app = FastAPI()
@@ -14,6 +13,7 @@ CHECK_INTERVAL = 10  # Tempo para considerar um host como "Down"
 
 class HostStatus(BaseModel):
     hostname: str
+    user: str
     ip: str
     ConnectionOK: bool
 
@@ -39,18 +39,18 @@ def monitor_hosts():
 @app.post("/update_status/")
 def update_status(data: HostStatus):
     hosts = load_hosts()
-    if not any(h["hostname"] == data.hostname and h["ip"] == data.ip for h in hosts):
-        hosts.append({"hostname": data.hostname, "ip": data.ip})
+    if not any(h["hostname"] == data.hostname and h["ip"] == data.ip and h["user"] == data.user for h in hosts):
+        hosts.append({"hostname": data.hostname,"user":data.user, "ip": data.ip})
         save_hosts(hosts)
     
-    STATUS[data.hostname] = {"ip": data.ip, "status": "OK" if data.ConnectionOK else "Down", "last_seen": time.time()}
+    STATUS[data.hostname] = {"user": data.user,"ip": data.ip, "status": "OK" if data.ConnectionOK else "Down", "last_seen": time.time()}
     return {"message": "Status updated"}
 
 @app.get("/status/", response_class=HTMLResponse)
 def get_status():
     hosts = load_hosts()
     table_rows = "".join(
-        f"<tr><td>{h['hostname']}</td><td>{h['ip']}</td><td style='color:{'green' if STATUS.get(h['hostname'], {}).get('status') == 'OK' else 'red'}'>{STATUS.get(h['hostname'], {}).get('status', 'Down')}</td></tr>"
+        f"<tr><td>{h['hostname']}</td><td>{h['user']}</td><td>{h['ip']}</td><td style='color:{'green' if STATUS.get(h['hostname'], {}).get('status') == 'OK' else 'red'}'>{STATUS.get(h['hostname'], {}).get('status', 'Down')}</td></tr>"
         for h in hosts
     )
     return f"""
@@ -59,7 +59,7 @@ def get_status():
     <body>
         <h2>Network Monitor</h2>
         <table border='1'>
-            <tr><th>Hostname</th><th>IP</th><th>Connection</th></tr>
+            <tr><th>Hostname</th><th>User</th><th>IP</th><th>Connection</th></tr>
             {table_rows}
         </table>
     </body>
@@ -68,4 +68,5 @@ def get_status():
 
 threading.Thread(target=monitor_hosts, daemon=True).start()
 if __name__ == "__main__":
-        uvicorn.run(app, host="0.0.0.0", port=8000)
+	import uvicorn
+	uvicorn.run(app, host="0.0.0.0", port=8000)
